@@ -10,14 +10,6 @@ class QuotationSystem {
         this.init();
     }
 
-    init() {
-        this.bindEvents();
-        this.renderTemplates();
-        this.renderHistory();
-        this.updateStats();
-        this.populateTemplateSelect();
-    }
-
     // 从localStorage加载数据
     loadFromStorage(key) {
         try {
@@ -173,11 +165,36 @@ class QuotationSystem {
         };
     }
 
-    bindEvents() {
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
-        });
+    init() {
+        this.bindEvents();
+        this.bindNavigation();
+        this.bindDataManagement();
+        this.renderTemplates();
+        this.renderHistory();
+        this.updateStats();
+        this.populateTemplateSelect();
+    }
 
+    bindNavigation() {
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const tabName = e.currentTarget.dataset.tab;
+                this.switchTab(tabName);
+            });
+        });
+    }
+
+    switchTab(tabName) {
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.tab === tabName);
+        });
+        
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.toggle('active', content.id === tabName);
+        });
+    }
+
+    bindEvents() {
         document.getElementById('calculateBtn').addEventListener('click', () => this.handleCalculate());
         document.getElementById('resetBtn').addEventListener('click', () => this.resetForm());
         document.getElementById('saveQuoteBtn').addEventListener('click', () => this.saveQuote());
@@ -209,20 +226,22 @@ class QuotationSystem {
         });
     }
 
-    switchTab(tabName) {
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.tab === tabName);
+    bindDataManagement() {
+        document.getElementById('exportDataBtn').addEventListener('click', () => this.exportAllData());
+        document.getElementById('importDataBtn').addEventListener('click', () => {
+            document.getElementById('importFileInput').click();
         });
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.toggle('active', content.id === tabName);
-        });
+        document.getElementById('importFileInput').addEventListener('change', (e) => this.importData(e));
+        document.getElementById('clearHistoryBtn').addEventListener('click', () => this.clearHistory());
+        document.getElementById('resetTemplatesBtn').addEventListener('click', () => this.resetTemplates());
+        document.getElementById('clearAllDataBtn').addEventListener('click', () => this.clearAllData());
     }
 
     handleCalculate() {
         const data = this.getFormData();
         
         if (!data.length || !data.width || !data.height) {
-            alert('请填写完整的纸箱尺寸！');
+            this.showToast('请填写完整的纸箱尺寸！', 'error');
             return;
         }
 
@@ -235,6 +254,7 @@ class QuotationSystem {
         };
 
         this.displayResult(result);
+        this.showToast('报价计算完成！');
     }
 
     getFormData() {
@@ -253,7 +273,7 @@ class QuotationSystem {
             length: document.getElementById('boxLength').value,
             width: document.getElementById('boxWidth').value,
             height: document.getElementById('boxHeight').value,
-            fluteType: document.getElementById('fluteType').value,
+            fluteType: document.querySelector('input[name="fluteType"]:checked').value,
             facePaperWeight: document.getElementById('facePaperWeight').value,
             innerPaperWeight: document.getElementById('innerPaperWeight').value,
             corePaperWeight: document.getElementById('corePaperWeight').value,
@@ -266,13 +286,13 @@ class QuotationSystem {
 
     displayResult(result) {
         document.getElementById('areaResult').textContent = result.area.toFixed(4) + ' ㎡';
-        document.getElementById('materialCost').textContent = result.materialCost.toFixed(2) + ' 元';
-        document.getElementById('wasteCost').textContent = result.wasteCost.toFixed(2) + ' 元';
-        document.getElementById('processCost').textContent = result.processCost.toFixed(2) + ' 元';
-        document.getElementById('profitCost').textContent = result.profit.toFixed(2) + ' 元';
-        document.getElementById('taxCost').textContent = result.tax.toFixed(2) + ' 元';
-        document.getElementById('unitPrice').textContent = result.unitPrice.toFixed(2) + ' 元';
-        document.getElementById('totalPrice').textContent = result.totalPrice.toFixed(2) + ' 元';
+        document.getElementById('materialCost').textContent = result.materialCost.toFixed(2);
+        document.getElementById('wasteCost').textContent = result.wasteCost.toFixed(2);
+        document.getElementById('processCost').textContent = result.processCost.toFixed(2);
+        document.getElementById('profitCost').textContent = result.profit.toFixed(2);
+        document.getElementById('taxCost').textContent = result.tax.toFixed(2);
+        document.getElementById('unitPrice').textContent = '¥' + result.unitPrice.toFixed(2);
+        document.getElementById('totalPrice').textContent = '¥' + result.totalPrice.toFixed(2);
         
         document.getElementById('resultCard').style.display = 'block';
     }
@@ -285,7 +305,7 @@ class QuotationSystem {
         document.getElementById('boxLength').value = '';
         document.getElementById('boxWidth').value = '';
         document.getElementById('boxHeight').value = '';
-        document.getElementById('fluteType').value = 'A';
+        document.querySelector('input[name="fluteType"][value="A"]').checked = true;
         document.getElementById('facePaperWeight').value = '250';
         document.getElementById('innerPaperWeight').value = '250';
         document.getElementById('corePaperWeight').value = '120';
@@ -296,16 +316,17 @@ class QuotationSystem {
         document.getElementById('templateSelect').value = '';
         document.getElementById('resultCard').style.display = 'none';
         this.currentQuote = null;
+        this.showToast('表单已重置');
     }
 
     saveQuote() {
         if (!this.currentQuote) {
-            alert('请先计算报价！');
+            this.showToast('请先计算报价！', 'error');
             return;
         }
 
         if (!this.currentQuote.customerName) {
-            alert('请填写客户名称！');
+            this.showToast('请填写客户名称！', 'error');
             return;
         }
 
@@ -314,12 +335,12 @@ class QuotationSystem {
         this.renderHistory();
         this.updateStats();
         
-        alert('报价保存成功！');
+        this.showToast('报价保存成功！');
     }
 
     exportQuote() {
         if (!this.currentQuote) {
-            alert('请先计算报价！');
+            this.showToast('请先计算报价！', 'error');
             return;
         }
 
@@ -361,6 +382,7 @@ class QuotationSystem {
         a.download = `报价单_${data.customerName || '未命名'}_${new Date().toLocaleDateString('zh-CN')}.txt`;
         a.click();
         URL.revokeObjectURL(url);
+        this.showToast('报价单导出成功！');
     }
 
     populateTemplateSelect() {
@@ -380,7 +402,7 @@ class QuotationSystem {
         
         const template = this.templates.find(t => t.id === templateId);
         if (template) {
-            alert(`已应用模板: ${template.name}\n纸长余量: ${template.marginLength}cm\n纸宽余量: ${template.marginWidth}cm`);
+            this.showToast(`已应用模板: ${template.name}`);
         }
     }
 
@@ -388,7 +410,7 @@ class QuotationSystem {
         const container = document.getElementById('templateList');
         
         if (this.templates.length === 0) {
-            container.innerHTML = this.getEmptyState('暂无模板', '点击"新建模板"创建第一个箱型模板');
+            container.innerHTML = this.getEmptyState('暂无模板', '点击"新建"创建第一个箱型模板');
             return;
         }
 
@@ -401,7 +423,7 @@ class QuotationSystem {
                     <span class="template-type">${this.getTypeLabel(template.type)}</span>
                 </div>
                 <div class="template-desc">${template.description || '暂无描述'}</div>
-                <div style="color: #6b7280; font-size: 13px; margin-bottom: 12px;">
+                <div style="color: #6b7280; font-size: 12px; margin-bottom: 12px;">
                     纸长余量: ${template.marginLength}cm | 纸宽余量: ${template.marginWidth}cm
                     ${!template.active ? ' | <span style="color: #ef4444;">已禁用</span>' : ''}
                 </div>
@@ -426,7 +448,7 @@ class QuotationSystem {
         const labels = {
             'normal': '普通客户',
             'long-term': '长期客户',
-            'vip': 'VIP客户'
+            'vip': '大客户'
         };
         return labels[level] || level;
     }
@@ -464,7 +486,7 @@ class QuotationSystem {
     saveTemplate() {
         const name = document.getElementById('templateName').value.trim();
         if (!name) {
-            alert('请输入模板名称！');
+            this.showToast('请输入模板名称！', 'error');
             return;
         }
 
@@ -494,6 +516,7 @@ class QuotationSystem {
         this.renderTemplates();
         this.populateTemplateSelect();
         this.closeModal('templateModal');
+        this.showToast('模板保存成功！');
     }
 
     deleteTemplate(id) {
@@ -503,6 +526,7 @@ class QuotationSystem {
         this.saveToStorage('carton_templates', this.templates);
         this.renderTemplates();
         this.populateTemplateSelect();
+        this.showToast('模板已删除');
     }
 
     closeModal(modalId) {
@@ -545,7 +569,7 @@ class QuotationSystem {
                     楞型: ${item.fluteType}楞
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="color: #6b7280; font-size: 13px;">
+                    <span style="color: #6b7280; font-size: 12px;">
                         ${new Date(item.createdAt).toLocaleString('zh-CN')}
                     </span>
                     <span style="font-weight: 700; color: #667eea; font-size: 18px;">
@@ -563,85 +587,79 @@ class QuotationSystem {
         this.viewingHistoryId = id;
         
         const content = `
-            <div class="detail-grid">
-                <div class="detail-section">
-                    <h4>基本信息</h4>
-                    <div class="detail-item">
-                        <span class="detail-label">客户名称</span>
-                        <span class="detail-value">${item.customerName || '-'}</span>
+            <div class="result-details" style="background: #f9fafb;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                    <div>
+                        <h4 style="font-size: 13px; color: #6b7280; margin-bottom: 6px;">客户名称</h4>
+                        <p style="font-weight: 600; font-size: 15px;">${item.customerName || '-'}</p>
                     </div>
-                    <div class="detail-item">
-                        <span class="detail-label">客户等级</span>
-                        <span class="detail-value">${this.getLevelLabel(item.customerLevel)}</span>
+                    <div>
+                        <h4 style="font-size: 13px; color: #6b7280; margin-bottom: 6px;">客户等级</h4>
+                        <p style="font-weight: 600; font-size: 15px;">${this.getLevelLabel(item.customerLevel)}</p>
                     </div>
-                    <div class="detail-item">
-                        <span class="detail-label">订单数量</span>
-                        <span class="detail-value">${item.orderQuantity} 个</span>
+                    <div>
+                        <h4 style="font-size: 13px; color: #6b7280; margin-bottom: 6px;">订单数量</h4>
+                        <p style="font-weight: 600; font-size: 15px;">${item.orderQuantity} 个</p>
                     </div>
-                    <div class="detail-item">
-                        <span class="detail-label">创建时间</span>
-                        <span class="detail-value">${new Date(item.createdAt).toLocaleString('zh-CN')}</span>
-                    </div>
-                </div>
-                
-                <div class="detail-section">
-                    <h4>纸箱规格</h4>
-                    <div class="detail-item">
-                        <span class="detail-label">尺寸</span>
-                        <span class="detail-value">${item.length} × ${item.width} × ${item.height} cm</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">尺寸类型</span>
-                        <span class="detail-value">${item.sizeType === 'outer' ? '外径' : '内径'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">楞型</span>
-                        <span class="detail-value">${item.fluteType}楞</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">用纸</span>
-                        <span class="detail-value">${item.facePaperWeight}g/${item.corePaperWeight}g/${item.innerPaperWeight}g</span>
+                    <div>
+                        <h4 style="font-size: 13px; color: #6b7280; margin-bottom: 6px;">楞型</h4>
+                        <p style="font-weight: 600; font-size: 15px;">${item.fluteType}楞</p>
                     </div>
                 </div>
                 
-                <div class="detail-section">
-                    <h4>成本明细</h4>
-                    <div class="detail-item">
-                        <span class="detail-label">用料面积</span>
-                        <span class="detail-value">${item.area.toFixed(4)} ㎡</span>
+                <div style="background: white; padding: 16px; border-radius: 10px; margin-bottom: 16px;">
+                    <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">📐 纸箱规格</h4>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #6b7280;">尺寸</span>
+                        <span style="font-weight: 500;">${item.length}×${item.width}×${item.height}cm (${item.sizeType === 'outer' ? '外径' : '内径'})</span>
                     </div>
-                    <div class="detail-item">
-                        <span class="detail-label">纸料成本</span>
-                        <span class="detail-value">¥${item.materialCost.toFixed(2)}</span>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #6b7280;">用纸</span>
+                        <span style="font-weight: 500;">${item.facePaperWeight}g/${item.corePaperWeight}g/${item.innerPaperWeight}g</span>
                     </div>
-                    <div class="detail-item">
-                        <span class="detail-label">损耗成本</span>
-                        <span class="detail-value">¥${item.wasteCost.toFixed(2)}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">工艺成本</span>
-                        <span class="detail-value">¥${item.processCost.toFixed(2)}</span>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #6b7280;">用料面积</span>
+                        <span style="font-weight: 500;">${item.area.toFixed(4)} ㎡</span>
                     </div>
                 </div>
                 
-                <div class="detail-section">
-                    <h4>最终报价</h4>
-                    <div class="detail-item">
-                        <span class="detail-label">利润</span>
-                        <span class="detail-value">¥${item.profit.toFixed(2)}</span>
+                <div style="background: white; padding: 16px; border-radius: 10px; margin-bottom: 16px;">
+                    <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">💰 成本明细</h4>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #6b7280;">纸料成本</span>
+                        <span style="font-weight: 500;">¥${item.materialCost.toFixed(2)}</span>
                     </div>
-                    <div class="detail-item">
-                        <span class="detail-label">税费(13%)</span>
-                        <span class="detail-value">¥${item.tax.toFixed(2)}</span>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #6b7280;">损耗成本</span>
+                        <span style="font-weight: 500;">¥${item.wasteCost.toFixed(2)}</span>
                     </div>
-                    <div class="detail-item">
-                        <span class="detail-label">单个纸箱</span>
-                        <span class="detail-value" style="color: #667eea; font-size: 18px;">¥${item.unitPrice.toFixed(2)}</span>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #6b7280;">工艺成本</span>
+                        <span style="font-weight: 500;">¥${item.processCost.toFixed(2)}</span>
                     </div>
-                    <div class="detail-item">
-                        <span class="detail-label">订单总价</span>
-                        <span class="detail-value" style="color: #667eea; font-size: 22px; font-weight: 800;">¥${item.totalPrice.toFixed(2)}</span>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #6b7280;">利润</span>
+                        <span style="font-weight: 500;">¥${item.profit.toFixed(2)}</span>
                     </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #6b7280;">税费(13%)</span>
+                        <span style="font-weight: 500;">¥${item.tax.toFixed(2)}</span>
+                    </div>
+                </div>
+                
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px; color: white;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                        <span style="opacity: 0.9;">单个纸箱</span>
+                        <span style="font-size: 22px; font-weight: 700;">¥${item.unitPrice.toFixed(2)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="opacity: 0.9;">订单总价</span>
+                        <span style="font-size: 28px; font-weight: 800;">¥${item.totalPrice.toFixed(2)}</span>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 16px; font-size: 12px; color: #6b7280;">
+                    创建时间: ${new Date(item.createdAt).toLocaleString('zh-CN')}
                 </div>
             </div>
         `;
@@ -661,7 +679,7 @@ class QuotationSystem {
         document.getElementById('boxLength').value = item.length;
         document.getElementById('boxWidth').value = item.width;
         document.getElementById('boxHeight').value = item.height;
-        document.getElementById('fluteType').value = item.fluteType;
+        document.querySelector(`input[name="fluteType"][value="${item.fluteType}"]`).checked = true;
         document.getElementById('facePaperWeight').value = item.facePaperWeight;
         document.getElementById('innerPaperWeight').value = item.innerPaperWeight;
         document.getElementById('corePaperWeight').value = item.corePaperWeight;
@@ -675,7 +693,7 @@ class QuotationSystem {
         this.switchTab('quotation');
         document.getElementById('resultCard').style.display = 'none';
         
-        alert('已复制报价信息，可修改后重新计算！');
+        this.showToast('已复制报价信息，可修改后重新计算！');
     }
 
     deleteQuote() {
@@ -686,6 +704,7 @@ class QuotationSystem {
         this.renderHistory();
         this.updateStats();
         this.closeModal('quoteDetailModal');
+        this.showToast('报价记录已删除');
     }
 
     updateStats() {
@@ -696,8 +715,126 @@ class QuotationSystem {
             : 0;
 
         document.getElementById('totalQuotes').textContent = totalQuotes;
-        document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
-        document.getElementById('avgUnitPrice').textContent = avgUnitPrice.toFixed(2);
+        document.getElementById('totalAmount').textContent = '¥' + totalAmount.toFixed(0);
+        document.getElementById('avgUnitPrice').textContent = '¥' + avgUnitPrice.toFixed(2);
+    }
+
+    // 数据导出
+    exportAllData() {
+        const data = {
+            version: '1.0.0',
+            exportTime: new Date().toISOString(),
+            templates: this.templates,
+            history: this.history
+        };
+        
+        const jsonString = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `纸箱报价系统备份_${new Date().toLocaleDateString('zh-CN')}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        this.showToast('数据导出成功！');
+    }
+
+    // 数据导入
+    importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        if (!confirm('导入数据会覆盖现有数据，确定要继续吗？')) {
+            event.target.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                
+                if (!data.templates || !data.history) {
+                    throw new Error('Invalid data format');
+                }
+                
+                this.templates = data.templates;
+                this.history = data.history;
+                
+                this.saveToStorage('carton_templates', this.templates);
+                this.saveToStorage('carton_history', this.history);
+                
+                this.renderTemplates();
+                this.renderHistory();
+                this.updateStats();
+                this.populateTemplateSelect();
+                
+                this.showToast('数据导入成功！');
+            } catch (error) {
+                this.showToast('数据导入失败，请检查文件格式！', 'error');
+            }
+        };
+        
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    // 清空历史
+    clearHistory() {
+        if (!confirm('确定要清空所有报价历史记录吗？此操作不可恢复！')) return;
+        
+        this.history = [];
+        this.saveToStorage('carton_history', this.history);
+        this.renderHistory();
+        this.updateStats();
+        this.showToast('历史记录已清空');
+    }
+
+    // 重置模板
+    resetTemplates() {
+        if (!confirm('确定要重置为默认模板吗？此操作不可恢复！')) return;
+        
+        this.templates = this.getDefaultTemplates();
+        this.saveToStorage('carton_templates', this.templates);
+        this.renderTemplates();
+        this.populateTemplateSelect();
+        this.showToast('模板已重置为默认值');
+    }
+
+    // 清除所有数据
+    clearAllData() {
+        if (!confirm('确定要清除所有数据吗？此操作不可恢复！')) return;
+        if (!confirm('这是最后一次确认，所有数据将被永久删除！')) return;
+        
+        this.templates = this.getDefaultTemplates();
+        this.history = [];
+        
+        this.saveToStorage('carton_templates', this.templates);
+        this.saveToStorage('carton_history', this.history);
+        
+        this.renderTemplates();
+        this.renderHistory();
+        this.updateStats();
+        this.populateTemplateSelect();
+        
+        this.showToast('所有数据已清除');
+    }
+
+    showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = 'toast show';
+        
+        if (type === 'error') {
+            toast.style.background = '#ef4444';
+        } else {
+            toast.style.background = '#1d1d1f';
+        }
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
     }
 
     getEmptyState(title, subtitle) {

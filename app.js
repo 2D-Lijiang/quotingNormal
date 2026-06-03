@@ -79,15 +79,7 @@ class QuotationSystem {
         return coefficients[fluteType] || 1.50;
     }
 
-    // 客户等级利润率
-    getProfitRate(level) {
-        const rates = {
-            'normal': 0.15,
-            'long-term': 0.10,
-            'vip': 0.08
-        };
-        return rates[level] || 0.15;
-    }
+
 
     // 印刷成本
     getPrintCost(colors) {
@@ -119,9 +111,9 @@ class QuotationSystem {
             length, width, height,
             sizeType, fluteType,
             facePaperWeight, innerPaperWeight, corePaperWeight,
-            boardPrice, wasteRate,
+            boardPrice, wasteRate, taxRate, profitRate,
             printColors, specialProcess,
-            customerLevel, orderQuantity,
+            orderQuantity,
             marginLength = 5, marginWidth = 3
         } = data;
 
@@ -137,8 +129,9 @@ class QuotationSystem {
         }
 
         const area = this.calculateArea(actualLength, actualWidth, actualHeight, marginLength, marginWidth);
-        const profitRate = this.getProfitRate(customerLevel);
-        const wasteRateDecimal = (parseFloat(wasteRate) || 5) / 100;
+        const wasteRateDecimal = (parseFloat(wasteRate) || 0) / 100;
+        const taxRateDecimal = (parseFloat(taxRate) || 13) / 100;
+        const profitRateDecimal = (parseFloat(profitRate) || 15) / 100;
         const printCost = this.getPrintCost(printColors);
         const processCost = parseFloat(specialProcess) || 0;
 
@@ -147,8 +140,8 @@ class QuotationSystem {
         const processCostTotal = area * (printCost + processCost);
         
         const subTotal = materialCost + wasteCost + processCostTotal;
-        const profit = subTotal * profitRate;
-        const tax = (subTotal + profit) * 0.13;
+        const profit = subTotal * profitRateDecimal;
+        const tax = (subTotal + profit) * taxRateDecimal;
         
         const unitPrice = subTotal + profit + tax;
         const totalPrice = unitPrice * (parseFloat(orderQuantity) || 1);
@@ -209,7 +202,6 @@ class QuotationSystem {
         });
 
         document.getElementById('searchHistory').addEventListener('input', () => this.renderHistory());
-        document.getElementById('filterLevel').addEventListener('change', () => this.renderHistory());
 
         document.getElementById('copyQuoteBtn').addEventListener('click', () => this.copyQuote());
         document.getElementById('deleteQuoteBtn').addEventListener('click', () => this.deleteQuote());
@@ -267,7 +259,6 @@ class QuotationSystem {
             marginLength: template?.marginLength || 5,
             marginWidth: template?.marginWidth || 3,
             customerName: document.getElementById('customerName').value,
-            customerLevel: document.getElementById('customerLevel').value,
             orderQuantity: document.getElementById('orderQuantity').value,
             sizeType: document.querySelector('input[name="sizeType"]:checked').value,
             length: document.getElementById('boxLength').value,
@@ -279,6 +270,8 @@ class QuotationSystem {
             corePaperWeight: document.getElementById('corePaperWeight').value,
             boardPrice: document.getElementById('boardPrice').value,
             wasteRate: document.getElementById('wasteRate').value,
+            taxRate: document.getElementById('taxRate').value,
+            profitRate: document.getElementById('profitRate').value,
             printColors: document.getElementById('printColors').value,
             specialProcess: document.getElementById('specialProcess').value
         };
@@ -299,21 +292,26 @@ class QuotationSystem {
 
     resetForm() {
         document.getElementById('customerName').value = '';
-        document.getElementById('customerLevel').value = 'normal';
         document.getElementById('orderQuantity').value = '1000';
         document.querySelector('input[name="sizeType"][value="outer"]').checked = true;
-        document.getElementById('boxLength').value = '';
-        document.getElementById('boxWidth').value = '';
-        document.getElementById('boxHeight').value = '';
+        document.getElementById('boxLength').value = '40';
+        document.getElementById('boxWidth').value = '30';
+        document.getElementById('boxHeight').value = '20';
         document.querySelector('input[name="fluteType"][value="A"]').checked = true;
         document.getElementById('facePaperWeight').value = '250';
         document.getElementById('innerPaperWeight').value = '250';
         document.getElementById('corePaperWeight').value = '120';
         document.getElementById('boardPrice').value = '3.5';
-        document.getElementById('wasteRate').value = '5';
+        document.getElementById('wasteRate').value = '0';
+        document.getElementById('taxRate').value = '13';
+        document.getElementById('profitRate').value = '15';
         document.getElementById('printColors').value = '0';
         document.getElementById('specialProcess').value = '0';
-        document.getElementById('templateSelect').value = '';
+        // 默认选中第一个模板
+        const firstTemplate = this.templates.find(t => t.active);
+        if (firstTemplate) {
+            document.getElementById('templateSelect').value = firstTemplate.id;
+        }
         document.getElementById('resultCard').style.display = 'none';
         this.currentQuote = null;
         this.showToast('表单已重置');
@@ -325,11 +323,7 @@ class QuotationSystem {
             return;
         }
 
-        if (!this.currentQuote.customerName) {
-            this.showToast('请填写客户名称！', 'error');
-            return;
-        }
-
+        // 客户名称允许为空，不需要检查
         this.history.unshift(this.currentQuote);
         this.saveToStorage('carton_history', this.history);
         this.renderHistory();
@@ -349,7 +343,6 @@ class QuotationSystem {
 纸箱报价单
 =====================================
 客户名称: ${data.customerName || '-'}
-客户等级: ${this.getLevelLabel(data.customerLevel)}
 订单数量: ${data.orderQuantity} 个
 创建时间: ${new Date(data.createdAt).toLocaleString('zh-CN')}
 
@@ -366,7 +359,7 @@ class QuotationSystem {
 损耗成本: ${data.wasteCost.toFixed(2)} 元
 工艺成本: ${data.processCost.toFixed(2)} 元
 利润: ${data.profit.toFixed(2)} 元
-税费(13%): ${data.tax.toFixed(2)} 元
+税费(${data.taxRate || 13}%): ${data.tax.toFixed(2)} 元
 
 最终报价
 -------------------------------------
@@ -389,12 +382,18 @@ class QuotationSystem {
         const select = document.getElementById('templateSelect');
         select.innerHTML = '<option value="">-- 请选择模板 --</option>';
         
-        this.templates.filter(t => t.active).forEach(template => {
+        const activeTemplates = this.templates.filter(t => t.active);
+        activeTemplates.forEach(template => {
             const option = document.createElement('option');
             option.value = template.id;
             option.textContent = template.name;
             select.appendChild(option);
         });
+        
+        // 默认选中第一个模板
+        if (activeTemplates.length > 0) {
+            select.value = activeTemplates[0].id;
+        }
     }
 
     applyTemplate(templateId) {
@@ -442,15 +441,6 @@ class QuotationSystem {
             'custom': '全自定义'
         };
         return labels[type] || type;
-    }
-
-    getLevelLabel(level) {
-        const labels = {
-            'normal': '普通客户',
-            'long-term': '长期客户',
-            'vip': '大客户'
-        };
-        return labels[level] || level;
     }
 
     openTemplateModal(template = null) {
@@ -536,7 +526,6 @@ class QuotationSystem {
     renderHistory() {
         const container = document.getElementById('historyList');
         const searchTerm = document.getElementById('searchHistory').value.toLowerCase();
-        const filterLevel = document.getElementById('filterLevel').value;
 
         let filteredHistory = this.history;
         
@@ -544,10 +533,6 @@ class QuotationSystem {
             filteredHistory = filteredHistory.filter(h => 
                 (h.customerName || '').toLowerCase().includes(searchTerm)
             );
-        }
-        
-        if (filterLevel) {
-            filteredHistory = filteredHistory.filter(h => h.customerLevel === filterLevel);
         }
 
         if (filteredHistory.length === 0) {
@@ -561,7 +546,6 @@ class QuotationSystem {
                     <div>
                         <div class="history-customer">${item.customerName || '未命名客户'}</div>
                     </div>
-                    <span class="history-level">${this.getLevelLabel(item.customerLevel)}</span>
                 </div>
                 <div class="history-info">
                     ${item.templateName ? `模板: ${item.templateName} | ` : ''}
@@ -594,16 +578,16 @@ class QuotationSystem {
                         <p style="font-weight: 600; font-size: 15px;">${item.customerName || '-'}</p>
                     </div>
                     <div>
-                        <h4 style="font-size: 13px; color: #6b7280; margin-bottom: 6px;">客户等级</h4>
-                        <p style="font-weight: 600; font-size: 15px;">${this.getLevelLabel(item.customerLevel)}</p>
-                    </div>
-                    <div>
                         <h4 style="font-size: 13px; color: #6b7280; margin-bottom: 6px;">订单数量</h4>
                         <p style="font-weight: 600; font-size: 15px;">${item.orderQuantity} 个</p>
                     </div>
                     <div>
                         <h4 style="font-size: 13px; color: #6b7280; margin-bottom: 6px;">楞型</h4>
                         <p style="font-weight: 600; font-size: 15px;">${item.fluteType}楞</p>
+                    </div>
+                    <div>
+                        <h4 style="font-size: 13px; color: #6b7280; margin-bottom: 6px;">税率/利润率</h4>
+                        <p style="font-weight: 600; font-size: 15px;">${item.taxRate || 13}% / ${item.profitRate || 15}%</p>
                     </div>
                 </div>
                 
@@ -642,7 +626,7 @@ class QuotationSystem {
                         <span style="font-weight: 500;">¥${item.profit.toFixed(2)}</span>
                     </div>
                     <div style="display: flex; justify-content: space-between;">
-                        <span style="color: #6b7280;">税费(13%)</span>
+                        <span style="color: #6b7280;">税费(${item.taxRate || 13}%)</span>
                         <span style="font-weight: 500;">¥${item.tax.toFixed(2)}</span>
                     </div>
                 </div>
@@ -673,7 +657,6 @@ class QuotationSystem {
         if (!item) return;
 
         document.getElementById('customerName').value = item.customerName || '';
-        document.getElementById('customerLevel').value = item.customerLevel;
         document.getElementById('orderQuantity').value = item.orderQuantity;
         document.querySelector(`input[name="sizeType"][value="${item.sizeType}"]`).checked = true;
         document.getElementById('boxLength').value = item.length;
@@ -685,6 +668,8 @@ class QuotationSystem {
         document.getElementById('corePaperWeight').value = item.corePaperWeight;
         document.getElementById('boardPrice').value = item.boardPrice;
         document.getElementById('wasteRate').value = item.wasteRate;
+        document.getElementById('taxRate').value = item.taxRate || 13;
+        document.getElementById('profitRate').value = item.profitRate || 15;
         document.getElementById('printColors').value = item.printColors;
         document.getElementById('specialProcess').value = item.specialProcess;
         document.getElementById('templateSelect').value = item.templateId || '';

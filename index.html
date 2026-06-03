@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>纸箱报价系统</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app">
+        <!-- 顶部导航 -->
+        <header class="header">
+            <div class="header-content">
+                <h1>纸箱报价系统</h1>
+                <button id="settingsBtn" class="icon-btn" title="设置">
+                    ⚙️
+                </button>
+            </div>
+        </header>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 报价计算模块 -->
+            <section id="quotation" class="tab-content active">
+                <div class="card">
+                    <h2>📦 新建报价</h2>
+                    
+                    <!-- 模板选择 -->
+                    <div class="form-group">
+                        <label>📋 选择模板</label>
+                        <select id="templateSelect" class="form-control">
+                            <option value="">-- 请选择模板 --</option>
+                        </select>
+                    </div>
+
+                    <!-- 客户信息 -->
+                    <div class="form-group">
+                        <label>👤 客户名称</label>
+                        <input type="text" id="customerName" class="form-control" placeholder="请输入客户名称">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>👥 客户等级</label>
+                            <select id="customerLevel" class="form-control">
+                                <option value="normal">普通客户 (15%)</option>
+                                <option value="long-term">长期客户 (10%)</option>
+                                <option value="vip">大客户 (8%)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>📦 订单数量</label>
+                            <input type="number" id="orderQuantity" class="form-control" value="1000" min="1">
+                        </div>
+                    </div>
+
+                    <!-- 纸箱尺寸 -->
+                    <div class="section-title">📐 纸箱尺寸</div>
+                    <div class="form-group">
+                        <label class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="sizeType" value="outer" checked>
+                                <span>外径</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="sizeType" value="inner">
+                                <span>内径</span>
+                            </label>
+                        </label>
+                    </div>
+
+                    <div class="dimension-inputs">
+                        <div class="dimension-item">
+                            <label>长 (cm)</label>
+                            <input type="number" id="boxLength" class="form-control" step="0.1" placeholder="0.0">
+                        </div>
+                        <div class="dimension-separator">×</div>
+                        <div class="dimension-item">
+                            <label>宽 (cm)</label>
+                            <input type="number" id="boxWidth" class="form-control" step="0.1" placeholder="0.0">
+                        </div>
+                        <div class="dimension-separator">×</div>
+                        <div class="dimension-item">
+                            <label>高 (cm)</label>
+                            <input type="number" id="boxHeight" class="form-control" step="0.1" placeholder="0.0">
+                        </div>
+                    </div>
+
+                    <!-- 材料配置 -->
+                    <div class="section-title">🧻 材料配置</div>
+                    <div class="form-group">
+                        <label>📊 楞型</label>
+                        <div class="flute-grid">
+                            <label class="flute-option">
+                                <input type="radio" name="fluteType" value="A" checked>
+                                <span>A楞</span>
+                            </label>
+                            <label class="flute-option">
+                                <input type="radio" name="fluteType" value="B">
+                                <span>B楞</span>
+                            </label>
+                            <label class="flute-option">
+                                <input type="radio" name="fluteType" value="C">
+                                <span>C楞</span>
+                            </label>
+                            <label class="flute-option">
+                                <input type="radio" name="fluteType" value="E">
+                                <span>E楞</span>
+                            </label>
+                            <label class="flute-option">
+                                <input type="radio" name="fluteType" value="AB">
+                                <span>AB楞</span>
+                            </label>
+                            <label class="flute-option">
+                                <input type="radio" name="fluteType" value="BC">
+                                <span>BC楞</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>面纸 (g/㎡)</label>
+                            <input type="number" id="facePaperWeight" class="form-control" value="250" min="100">
+                        </div>
+                        <div class="form-group">
+                            <label>芯纸 (g/㎡)</label>
+                            <input type="number" id="corePaperWeight" class="form-control" value="120" min="80">
+                        </div>
+                        <div class="form-group">
+                            <label>里纸 (g/㎡)</label>
+                            <input type="number" id="innerPaperWeight" class="form-control" value="250" min="100">
+                        </div>
+                    </div>
+
+                    <!-- 价格参数 -->
+                    <div class="section-title">💰 价格参数</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>纸板单价 (元/㎡)</label>
+                            <input type="number" id="boardPrice" class="form-control" value="3.5" step="0.01" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>损耗率 (%)</label>
+                            <input type="number" id="wasteRate" class="form-control" value="5" step="0.1" min="0" max="20">
+                        </div>
+                    </div>
+
+                    <!-- 工艺配置 -->
+                    <div class="section-title">🎨 工艺配置</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>🖨️ 印刷色数</label>
+                            <select id="printColors" class="form-control">
+                                <option value="0">无印刷</option>
+                                <option value="1">1色 (+0.10/㎡)</option>
+                                <option value="2">2色 (+0.18/㎡)</option>
+                                <option value="3">3色 (+0.25/㎡)</option>
+                                <option value="4">4色 (+0.32/㎡)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>✨ 特殊工艺</label>
+                            <select id="specialProcess" class="form-control">
+                                <option value="0">无</option>
+                                <option value="0.15">烫金 (+0.15/㎡)</option>
+                                <option value="0.20">覆膜 (+0.20/㎡)</option>
+                                <option value="0.25">UV (+0.25/㎡)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button id="calculateBtn" class="btn btn-primary btn-block">
+                            🔢 计算报价
+                        </button>
+                        <button id="resetBtn" class="btn btn-secondary">
+                            🔄 重置
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 报价结果 -->
+                <div id="resultCard" class="card result-card" style="display: none;">
+                    <h2>💵 报价结果</h2>
+                    <div class="result-summary">
+                        <div class="result-main">
+                            <div class="result-price">
+                                <span class="price-label">单个纸箱</span>
+                                <span class="price-value" id="unitPrice">¥0.00</span>
+                            </div>
+                            <div class="result-total">
+                                <span class="total-label">订单总价</span>
+                                <span class="total-value" id="totalPrice">¥0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="result-details">
+                        <h3>📊 成本明细</h3>
+                        <div class="detail-row">
+                            <span class="detail-label">📏 用料面积</span>
+                            <span class="detail-value" id="areaResult">0.0000 ㎡</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">🧻 纸料成本</span>
+                            <span class="detail-value">¥<span id="materialCost">0.00</span></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">📉 损耗成本</span>
+                            <span class="detail-value">¥<span id="wasteCost">0.00</span></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">🎨 工艺成本</span>
+                            <span class="detail-value">¥<span id="processCost">0.00</span></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">💵 利润</span>
+                            <span class="detail-value">¥<span id="profitCost">0.00</span></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">🏛️ 税费 (13%)</span>
+                            <span class="detail-value">¥<span id="taxCost">0.00</span></span>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button id="saveQuoteBtn" class="btn btn-success btn-block">
+                            💾 保存报价
+                        </button>
+                        <button id="exportQuoteBtn" class="btn btn-secondary">
+                            📄 导出报价单
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 箱子模板模块 -->
+            <section id="templates" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>📋 箱子模板</h2>
+                        <button id="addTemplateBtn" class="btn btn-primary">+ 新建</button>
+                    </div>
+                    <div id="templateList" class="template-list"></div>
+                </div>
+            </section>
+
+            <!-- 历史记录模块 -->
+            <section id="history" class="tab-content">
+                <div class="card">
+                    <h2>📜 报价历史</h2>
+                    
+                    <!-- 搜索和筛选 -->
+                    <div class="filter-section">
+                        <div class="search-box">
+                            <input type="text" id="searchHistory" class="form-control" placeholder="🔍 搜索客户名称...">
+                        </div>
+                        <select id="filterLevel" class="form-control filter-select">
+                            <option value="">全部等级</option>
+                            <option value="normal">普通客户</option>
+                            <option value="long-term">长期客户</option>
+                            <option value="vip">大客户</option>
+                        </select>
+                    </div>
+
+                    <!-- 统计卡片 -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-value" id="totalQuotes">0</div>
+                            <div class="stat-label">报价次数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">💰</div>
+                            <div class="stat-value" id="totalAmount">0</div>
+                            <div class="stat-label">总金额</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📈</div>
+                            <div class="stat-value" id="avgUnitPrice">0</div>
+                            <div class="stat-label">平均单价</div>
+                        </div>
+                    </div>
+
+                    <div id="historyList" class="history-list"></div>
+                </div>
+            </section>
+
+            <!-- 我的设置模块 -->
+            <section id="settings" class="tab-content">
+                <div class="card">
+                    <h2>⚙️ 系统设置</h2>
+                    
+                    <div class="settings-section">
+                        <h3>📤 数据管理</h3>
+                        <div class="settings-item">
+                            <div class="settings-info">
+                                <div class="settings-label">导出数据</div>
+                                <div class="settings-desc">将所有模板和报价记录导出为JSON文件</div>
+                            </div>
+                            <button id="exportDataBtn" class="btn btn-primary">📤 导出</button>
+                        </div>
+                        <div class="settings-item">
+                            <div class="settings-info">
+                                <div class="settings-label">导入数据</div>
+                                <div class="settings-desc">从JSON文件导入数据（会覆盖现有数据）</div>
+                            </div>
+                            <button id="importDataBtn" class="btn btn-secondary">📥 导入</button>
+                            <input type="file" id="importFileInput" accept=".json" style="display: none;">
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>🗑️ 数据清理</h3>
+                        <div class="settings-item danger">
+                            <div class="settings-info">
+                                <div class="settings-label">清空报价历史</div>
+                                <div class="settings-desc">删除所有历史报价记录</div>
+                            </div>
+                            <button id="clearHistoryBtn" class="btn btn-danger">清空</button>
+                        </div>
+                        <div class="settings-item danger">
+                            <div class="settings-info">
+                                <div class="settings-label">重置模板</div>
+                                <div class="settings-desc">恢复默认模板设置</div>
+                            </div>
+                            <button id="resetTemplatesBtn" class="btn btn-danger">重置</button>
+                        </div>
+                        <div class="settings-item danger">
+                            <div class="settings-info">
+                                <div class="settings-label">清除所有数据</div>
+                                <div class="settings-desc">清除所有数据并恢复出厂设置</div>
+                            </div>
+                            <button id="clearAllDataBtn" class="btn btn-danger">清除</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>ℹ️ 关于系统</h3>
+                        <div class="about-info">
+                            <p><strong>版本:</strong> 1.0.0</p>
+                            <p><strong>功能:</strong> 纸箱报价计算系统</p>
+                            <p><strong>存储:</strong> 本地浏览器存储</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 底部导航 -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-tab="quotation">
+                <span class="nav-icon">📦</span>
+                <span class="nav-label">报价</span>
+            </button>
+            <button class="nav-item" data-tab="templates">
+                <span class="nav-icon">📋</span>
+                <span class="nav-label">模板</span>
+            </button>
+            <button class="nav-item" data-tab="history">
+                <span class="nav-icon">📜</span>
+                <span class="nav-label">历史</span>
+            </button>
+            <button class="nav-item" data-tab="settings">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">我的</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- 新建/编辑模板弹窗 -->
+    <div id="templateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">新建模板</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>模板名称</label>
+                    <input type="text" id="templateName" class="form-control" placeholder="例如: 标准外箱 0201">
+                </div>
+                <div class="form-group">
+                    <label>模板类型</label>
+                    <select id="templateType" class="form-control">
+                        <option value="standard">标准箱型</option>
+                        <option value="semi-custom">半定制</option>
+                        <option value="custom">全自定义</option>
+                    </select>
+                </div>
+                <div class="section-title">尺寸公式配置</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>纸长余量 (cm)</label>
+                        <input type="number" id="marginLength" class="form-control" value="5" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>纸宽余量 (cm)</label>
+                        <input type="number" id="marginWidth" class="form-control" value="3" step="0.1">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>描述</label>
+                    <textarea id="templateDesc" class="form-control" rows="3" placeholder="模板描述..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="templateActive" checked>
+                        <span>启用模板</span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-close">取消</button>
+                <button id="saveTemplateBtn" class="btn btn-primary">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 报价详情弹窗 -->
+    <div id="quoteDetailModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>报价详情</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="quoteDetailContent"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-close">关闭</button>
+                <button id="copyQuoteBtn" class="btn btn-primary">复制报价</button>
+                <button id="deleteQuoteBtn" class="btn btn-danger">删除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
